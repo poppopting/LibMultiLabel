@@ -1,0 +1,36 @@
+# This config only serves as an example as it is not tuned by hyper-parameter search.
+# data
+training_file: data/rcv1_topics/rcv1_topics_train_fold_3.txt #data/rcv1/rcv1_topics_train.txt
+val_file: data/rcv1_topics/rcv1_topics_val_fold_3.txt
+test_file: data/rcv1_topics/rcv1_topics_test.txt #data/rcv1/rcv1_topics_test.txt
+data_name: bert-RCV1-topics-3
+min_vocab_freq: 1
+max_seq_length: 512
+add_special_tokens: true
+# decide whether to use micromacro
+micromacro: false
+
+# train
+seed: 1337
+epochs: 15
+batch_size: 8
+optimizer: adamw
+learning_rate: 0.00005
+weight_decay: 0
+patience: 100
+
+# eval
+eval_batch_size: 8
+monitor_metrics: ['Micro-F1', 'Macro-F1']
+val_metric: Macro-F1
+
+# model
+model_name: BERT
+init_weight: null
+network_config:
+  encoder_hidden_dropout: 0.1
+  lm_weight: bert-base-uncased
+  lm_window: 512
+
+# pretrained vocab / embeddings
+embed_file: null

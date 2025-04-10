@@ -1,0 +1,35 @@
+# data
+training_file: data/rcv1_topics/rcv1_topics_train_fold_3.txt #data/rcv1/rcv1_topics_train.txt
+val_file: data/rcv1_topics/rcv1_topics_val_fold_3.txt
+test_file: data/rcv1_topics/rcv1_topics_test.txt #data/rcv1/rcv1_topics_test.txt
+data_name: kim-cnn-RCV1-topics-3
+min_vocab_freq: 1
+max_seq_length: 500
+# decide whether to use micromacro
+micromacro: false
+
+# train
+seed: 1337
+epochs: 50
+batch_size: 64
+optimizer: adam
+learning_rate: 0.0005
+weight_decay: 0
+patience: 5
+shuffle: true
+
+# eval
+eval_batch_size: 256
+monitor_metrics: ['Micro-F1', 'Macro-F1'] #['Micro-Precision', 'Micro-Recall', 'Micro-F1', 'Macro-F1', 'Another-Macro-F1', 'P@1', 'P@3', 'P@5']
+val_metric: Macro-F1
+
+# model
+model_name: KimCNN
+network_config:
+  embed_dropout: 0.2
+  post_encoder_dropout: 0.2
+  filter_sizes: [2, 4, 8]
+  num_filter_per_size: 128 # filter channels
+
+# pretrained vocab / embeddings
+embed_file: glove.6B.300d
