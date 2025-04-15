@@ -246,6 +246,9 @@ class TorchTrainer:
             self.trainer.fit(self.model, train_loader)
         else:
             val_loader = self._get_dataset_loader(split="val")
+            self.model.val_loader = val_loader
+            test_loader = self._get_dataset_loader(split="test")
+            self.model.test_loader = test_loader
             self.trainer.fit(self.model, train_loader, val_loader)
 
         # Set model to the best model. If the validation process is skipped during

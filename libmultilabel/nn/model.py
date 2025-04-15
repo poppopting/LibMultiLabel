@@ -8,7 +8,9 @@ import torch.optim as optim
 
 from ..common_utils import argsort_top_k, dump_log
 from ..nn.metrics import get_metrics, tabulate_metrics
-
+import os
+from tqdm.auto import tqdm
+from ..nn.loss_function import AsymmetricLoss, KLDivergenceLoss, JSDivergenceLoss, MultiLabelHingeLoss
 
 class MultiLabelModel(L.LightningModule):
     """Abstract class handling Pytorch Lightning training flow
@@ -68,6 +70,10 @@ class MultiLabelModel(L.LightningModule):
         top_k = 1 if self.multiclass else None
         self.eval_metric = get_metrics(metric_threshold, monitor_metrics, num_classes, top_k=top_k)
 
+        # store decision values
+        # self.val_loader = None
+        # self.test_loader = None
+
     @abstractmethod
     def shared_step(self, batch):
         """Return loss and predicted logits"""
@@ -110,7 +116,26 @@ class MultiLabelModel(L.LightningModule):
         self._shared_eval_step(batch, batch_idx)
 
     def on_validation_epoch_end(self):
-        return self._shared_eval_epoch_end(split="val")
+        metric_dict = self._shared_eval_epoch_end(split="val")
+        # Add test result
+        for split, loader in [('val', self.val_loader), ('test', self.test_loader)]:
+            print(f'Store decision values for {split}...')
+            preds = []
+            targets = []
+            for batch in tqdm(loader):
+                batch = {key: value.to('cuda:0') for key, value in batch.items()}
+                loss, logits = self.shared_step(batch)
+                preds.append(logits.detach().cpu().numpy())
+                targets.append(batch["label"].detach().cpu().numpy())
+
+            # store prediction value
+            preds = np.concatenate(preds)
+            targets = np.concatenate(targets)
+
+            file_name = f'epoch_{self.current_epoch}_{split}_predict_values.npz'
+            np.savez_compressed(os.path.abspath(os.path.join(self.log_path, os.path.pardir, file_name)), logits=preds, label=targets)
+
+        return metric_dict
 
     def test_step(self, batch, batch_idx):
         self._shared_eval_step(batch, batch_idx)
@@ -207,12 +232,16 @@ class Model(MultiLabelModel):
         self.configure_loss_function(loss_function)
 
     def configure_loss_function(self, loss_function):
-        assert hasattr(
-            F, loss_function
-        ), """
-            Invalid `loss_function`. Make sure the loss function is defined here:
-            https://pytorch.org/docs/stable/nn.functional.html#loss-functions"""
+        # assert hasattr(
+        #     F, loss_function
+        # ), """
+        #     Invalid `loss_function`. Make sure the loss function is defined here:
+        #     https://pytorch.org/docs/stable/nn.functional.html#loss-functions"""
         self.loss_function = getattr(F, loss_function)
+        # self.loss_function = KLDivergenceLoss(smoothing=0.1)
+        # self.loss_function = JSDivergenceLoss(smoothing=0.1)
+        # self.loss_function = MultiLabelHingeLoss(use_L2=True)
+        # self.loss_function = AsymmetricLoss(gamma_neg=4, gamma_pos=1, clip=0.05)
 
     def shared_step(self, batch):
         """Return loss and predicted logits of the network.
