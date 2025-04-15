@@ -20,6 +20,7 @@ parts/
 sdist/
 var/
 runs/
+linear_runs/
 wheels/
 prof/
 pip-wheel-metadata/
